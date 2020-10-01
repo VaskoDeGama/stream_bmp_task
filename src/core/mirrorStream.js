@@ -7,8 +7,6 @@ class MirrorStream extends Transform {
   }
 
   _transform (chunk, encoding, cb) {
-    console.log(`Transform: ${chunk.toString()} to ${chunk.toString().toUpperCase()}`)
-    chunk.write(chunk.toString().toUpperCase())
     cb(null, chunk)
   }
 }

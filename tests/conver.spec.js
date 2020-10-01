@@ -106,9 +106,9 @@ describe('flip row', () => {
 })
 
 describe('Pipe test', () => {
-  const piping = (max) => {
+  const piping = (length) => {
     return new Promise(resolve => {
-      const readStream = new MyReadStream({}, max)
+      const readStream = new MyReadStream({ highWaterMark: length })
       const writeStream = new MyWriteStream()
       const mirrorStream = new MirrorStream()
 
@@ -119,14 +119,9 @@ describe('Pipe test', () => {
     })
   }
 
-  test('test on 1 pkg', async () => {
-    const result = await piping(1)
-
-    expect(result.ws).toStrictEqual(result.rs)
-  })
   test('test on 10 pkg', async () => {
-    const result = await piping(10)
+    const result = await piping(3)
 
-    expect(result.ws).toStrictEqual(result.rs)
+    expect(result.ws).toStrictEqual([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]])
   })
 })

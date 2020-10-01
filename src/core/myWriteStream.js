@@ -7,8 +7,8 @@ class MyWriteStream extends Writable {
   }
 
   _write (chunk, encoding, callback) {
-    console.log(`Write:`, chunk.toString())
-    this.memory.push(chunk.toString())
+    this.memory.push([...chunk.values()])
+
     callback()
   }
 

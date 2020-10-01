@@ -1,27 +1,22 @@
 const { Readable } = require('stream')
 
-class MyReadStream extends Readable {
-  constructor (options, max) {
-    super(options)
+const bigArray = Array.from({ length: 10 }, (v, k) => k + 1)
 
-    this._max = max
+class MyReadStream extends Readable {
+  constructor (options) {
+    super(options)
     this._idx = 0
-    this.memory = []
   }
 
   _read (size) {
-    this._idx += 1
-
-    if (this._idx <= this._max) {
+    if (this._idx < bigArray.length) {
       setTimeout(() => {
-        const str = `${this._idx} package of ${this._max}`
+        const chunk = bigArray.slice(this._idx, this._idx + 3)
+        const buf = Buffer.from(chunk)
 
-        const buf = Buffer.from(str)
-
-        console.log(`Read: ${buf.toString()}`)
-        this.memory.push(str.toUpperCase())
+        this._idx += size
         this.push(buf)
-      }, 2000)
+      }, 1000)
     } else {
       this.push(null)
     }
