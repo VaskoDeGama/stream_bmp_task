@@ -24,3 +24,6 @@ readStream.on('close', () => {
 
   console.log(result)
 })
+
+writeStream.destroy()
+readStream.destroy()
