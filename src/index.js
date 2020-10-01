@@ -1,26 +1,23 @@
-const fs = require('fs').promises
+const fs = require('fs')
 const path = require('path')
-const { convert } = require('./convert')
+const MirrorStream = require('./mirrorStream')
 
 /**
  * Read, convert and save file
  * @returns {Promise<void>}
  */
 const main = async () => {
-  const [inputArg, outputArg] = process.argv.splice(2, 2)
-  const inputFile = path.parse(inputArg)
-  const outputFile = path.parse(outputArg)
-  const inputPath = path.join(__dirname, '../', inputFile.dir, inputFile.base)
-  const outputPath = path.join(__dirname, '../', outputFile.dir, outputFile.base)
+  const mirrorStream = new MirrorStream()
+  const readStream = fs.createReadStream(path.join(__dirname, '../', 'assets/', 'test.txt'), { encoding: 'utf8', highWaterMark: 3 })
+  const writeStream = fs.createWriteStream(path.join(__dirname, '../', 'dist/', 'test_out.txt'))
+  readStream.on('open', () => {
+    try {
+      readStream.pipe(mirrorStream).pipe(writeStream)
+    } catch (e) {
+      console.log(e)
+    }
+  })
 
-  try {
-    const inputBuffer = await fs.readFile(inputPath)
-    const result = await convert(inputBuffer)
-
-    await fs.writeFile(outputPath, result)
-  } catch (e) {
-    console.log(e)
-  }
 }
 
 main()
