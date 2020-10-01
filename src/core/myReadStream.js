@@ -1,17 +1,16 @@
 const { Readable } = require('stream')
 
-const bigArray = Array.from({ length: 10 }, (v, k) => k + 1)
-
 class MyReadStream extends Readable {
-  constructor (options) {
+  constructor (arrayOfData, options) {
     super(options)
+    this.arrayOfData = arrayOfData
     this._idx = 0
   }
 
   _read (size) {
-    if (this._idx < bigArray.length) {
+    if (this._idx < this.arrayOfData.length) {
       setTimeout(() => {
-        const chunk = bigArray.slice(this._idx, this._idx + 3)
+        const chunk = this.arrayOfData.slice(this._idx, this._idx + 3)
         const buf = Buffer.from(chunk)
 
         this._idx += size

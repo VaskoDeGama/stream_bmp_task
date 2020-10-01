@@ -1,16 +1,25 @@
-const { MirrorStream, MyReadStream, MyWriteStream } = require('./core')
+const { MyReadStream, MyWriteStream } = require('./core')
 
 /**
  * Read, convert and save file
  * @returns {Promise<void>}
  */
 
-const readStream = new MyReadStream({}, 1)
-const writeStream = new MyWriteStream()
-const mirrorStream = new MirrorStream()
+const bigArray = Array.from({ length: 30 }, (v, k) => k + 1)
+const readOptions = { highWaterMark: 3 }
+const readStream = new MyReadStream(bigArray, readOptions)
 
-readStream.pipe(mirrorStream).pipe(writeStream)
+const writeStream = new MyWriteStream()
+
+readStream.on('data', (chunk) => {
+  writeStream.write(chunk)
+})
+
 readStream.on('end', () => {
-  console.log(readStream.getMemory())
-  console.log(writeStream.getMemory())
+  writeStream.write('___END___')
+  console.log('End data')
+
+  const result = writeStream.getResult()
+
+  console.log(result)
 })
