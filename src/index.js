@@ -1,23 +1,16 @@
-const fs = require('fs')
-const path = require('path')
-const MirrorStream = require('./mirrorStream')
+const { MirrorStream, MyReadStream, MyWriteStream } = require('./core')
 
 /**
  * Read, convert and save file
  * @returns {Promise<void>}
  */
-const main = async () => {
-  const mirrorStream = new MirrorStream()
-  const readStream = fs.createReadStream(path.join(__dirname, '../', 'assets/', 'test.txt'), { encoding: 'utf8', highWaterMark: 3 })
-  const writeStream = fs.createWriteStream(path.join(__dirname, '../', 'dist/', 'test_out.txt'))
-  readStream.on('open', () => {
-    try {
-      readStream.pipe(mirrorStream).pipe(writeStream)
-    } catch (e) {
-      console.log(e)
-    }
-  })
 
-}
+const readStream = new MyReadStream({}, 1)
+const writeStream = new MyWriteStream()
+const mirrorStream = new MirrorStream()
 
-main()
+readStream.pipe(mirrorStream).pipe(writeStream)
+readStream.on('end', () => {
+  console.log(readStream.getMemory())
+  console.log(writeStream.getMemory())
+})

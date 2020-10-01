@@ -1,6 +1,6 @@
 const fs = require('fs').promises
 const path = require('path')
-const { convert, flipRow } = require('./../src/convert')
+const { convert, flipRow, MyReadStream, MyWriteStream, MirrorStream } = require('../src/core')
 
 jest.setTimeout(900000)
 
@@ -102,5 +102,31 @@ describe('flip row', () => {
     const result = flipRow(testBuffer)
 
     expect(result).toStrictEqual(equalBuffer)
+  })
+})
+
+describe('Pipe test', () => {
+  const piping = (max) => {
+    return new Promise(resolve => {
+      const readStream = new MyReadStream({}, max)
+      const writeStream = new MyWriteStream()
+      const mirrorStream = new MirrorStream()
+
+      readStream.pipe(mirrorStream).pipe(writeStream)
+      readStream.on('end', () => {
+        resolve({ rs: readStream.getMemory(), ws: writeStream.getMemory() })
+      })
+    })
+  }
+
+  test('test on 1 pkg', async () => {
+    const result = await piping(1)
+
+    expect(result.ws).toStrictEqual(result.rs)
+  })
+  test('test on 10 pkg', async () => {
+    const result = await piping(10)
+
+    expect(result.ws).toStrictEqual(result.rs)
   })
 })
