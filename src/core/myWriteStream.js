@@ -8,36 +8,36 @@ class MyWriteStream extends Writable {
   }
 
   _write (chunk, encoding, next) {
-    if (chunk.toString() === '___END___') {
-      if (this.buffer.length > 0) {
+    const parsedChunk = [...chunk.values()]
+
+    console.log('Received:', parsedChunk)
+
+    if (this.buffer.length < 10) {
+      if (this.buffer.length + parsedChunk.length > 10) {
+        const excess = parsedChunk.splice(10 - this.buffer.length, parsedChunk.length)
+
+        this.buffer.push(...parsedChunk)
         this.result.push(this.buffer)
         console.log('Pushed to result:', this.buffer)
         this.buffer = []
+        this.buffer.push(...excess)
+      } else {
+        this.buffer.push(...parsedChunk)
       }
     } else {
-      const parsedChunk = [...chunk.values()]
-
-      console.log('Received:', parsedChunk)
-
-      if (this.buffer.length < 10) {
-        if (this.buffer.length + parsedChunk.length > 10) {
-          const excess = parsedChunk.splice(10 - this.buffer.length, parsedChunk.length)
-
-          this.buffer.push(...parsedChunk)
-          this.result.push(this.buffer)
-          console.log('Pushed to result:', this.buffer)
-          this.buffer = []
-          this.buffer.push(...excess)
-        } else {
-          this.buffer.push(...parsedChunk)
-        }
-      } else {
-        this.result.push(this.buffer)
-        this.buffer = []
-      }
+      this.result.push(this.buffer)
+      this.buffer = []
     }
 
     next()
+  }
+
+  _final (callback) {
+    if (this.buffer.length > 0) {
+      this.result.push(this.buffer)
+      console.log('Pushed to result:', this.buffer)
+      this.buffer = []
+    }
   }
 
   getResult () {

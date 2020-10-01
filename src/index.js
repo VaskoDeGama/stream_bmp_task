@@ -16,9 +16,10 @@ readStream.on('data', (chunk) => {
 })
 
 readStream.on('end', () => {
-  writeStream.write('___END___')
-  console.log('End data')
+  writeStream.end()
+})
 
+readStream.on('close', () => {
   const result = writeStream.getResult()
 
   console.log(result)
