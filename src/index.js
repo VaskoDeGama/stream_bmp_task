@@ -11,19 +11,10 @@ const readStream = new MyReadStream(bigArray, readOptions)
 
 const writeStream = new MyWriteStream()
 
-readStream.on('data', (chunk) => {
-  writeStream.write(chunk)
-})
-
-readStream.on('end', () => {
-  writeStream.end()
-})
+readStream.pipe(writeStream)
 
 readStream.on('close', () => {
   const result = writeStream.getResult()
 
-  console.log(result)
+  console.log('Result:', result)
 })
-
-writeStream.destroy()
-readStream.destroy()
