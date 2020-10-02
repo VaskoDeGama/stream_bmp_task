@@ -255,7 +255,7 @@ describe('TRANSFORM STREAM', () => {
     const buffer = await fs.readFile(inputPath)
     let idx = 0
     let offsetIdx = 0
-    const data = [2, 3, 4, 5, 6, 7]
+    const shift = [2, 3, 4, 5, 6, 7]
 
     const flip = new MirrorStream()
     const ws = syncFs.createWriteStream(outputPath)
@@ -263,13 +263,13 @@ describe('TRANSFORM STREAM', () => {
     class TestReadable extends Readable {
       _read (size) {
         if (idx < buffer.length) {
-          let end = data[(offsetIdx++) % data.length]
-
-          if (end + idx >= buffer.length) {
-            end = buffer.length
-          }
-
           setTimeout(() => {
+            let end = shift[(offsetIdx++) % shift.length]
+
+            if (end + idx >= buffer.length) {
+              end = buffer.length
+            }
+
             this.push(buffer.slice(idx, idx + end))
             idx += end
           }, 2)
