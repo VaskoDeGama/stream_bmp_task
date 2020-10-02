@@ -88,7 +88,7 @@ const getRowInfo = (imgLength, imgHeight, imgWidth) => {
 /**
  * Decoded data object
  * @typedef {Object} decodedData
- * @property {fileHeader} fileHeader - the image size in bytes
+ * @property {fileHeader || Error} fileHeader - the image size in bytes
  * @property {dibHeader} dibHeader - the compression method being used
  * @property {rowInfo} rowInfo - information about row
  * @property {Buffer} image - the bitmap height in pixels
@@ -117,7 +117,7 @@ const decode = (rawData) => {
 
 /**
  * Reverse row
- * @param {Blob} row - buffer containing a string of pixels
+ * @param {Buffer || blob } row - buffer containing a string of pixels
  * @returns {Buffer} pixel array after transform
  */
 const flipRow = (row) => {

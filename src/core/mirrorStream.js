@@ -14,8 +14,7 @@ class MirrorStream extends Transform {
   constructor (options) {
     super(options)
 
-    this.fileHeader = null
-    this.dibHeader = null
+    this.offset = null
     this.rowSize = null
     this.fillingBytes = null
     this.itFirstPackage = true
@@ -26,58 +25,88 @@ class MirrorStream extends Transform {
   /**
    * Main transform function
    * @param {Buffer} chunk - data part
-   * @param {string} encoding - data encoding
+   * @param {BufferEncoding} encoding - data encoding
    * @param {function} next - callback
    * @private
    */
   _transform (chunk, encoding, next) {
     if (this.itFirstPackage) {
       try {
-        this.fileHeader = decodeFileHeader(chunk.slice(0, 14))
+        const header = this.parseHeader(chunk)
+
+        this.push(header)
       } catch (e) {
         return next(e)
       }
 
-      const dibHeaderSize = chunk.readUInt32LE(14)
+      const imageBuffer = chunk.slice(this.offset)
 
-      this.dibHeader = decodeDIBHeader(chunk.slice(14, dibHeaderSize))
-
-      const { rowSize, fillingBytes } = getRowInfo(this.dibHeader.imageSize, this.dibHeader.height, this.dibHeader.width)
-
-      this.rowSize = rowSize
-      this.fillingBytes = fillingBytes
-
-      const header = chunk.slice(0, this.fileHeader.offset)
-
-      this.push(header)
-
-      const imageBuffer = chunk.slice(this.fileHeader.offset)
-
+      this.transformChunk(imageBuffer, this.rowSize, this.fillingBytes)
       this.itFirstPackage = false
 
-      const rows = Math.floor(imageBuffer.length / this.rowSize)
-
-      this.saveNotFullRow(imageBuffer, rows, rowSize)
-      this.flipAndPush(imageBuffer, rows, rowSize, fillingBytes)
       return next()
     }
 
     if (this.buffer.length > 0) {
-      const needFilling = this.rowSize - this.buffer.length
-      const filler = chunk.slice(0, needFilling)
-      const row = Buffer.concat([this.buffer, filler], this.rowSize)
-
-      this.buffer = null
-      this.flipAndPush(row, 1, this.rowSize, this.fillingBytes)
-      chunk = chunk.slice(needFilling)
+      chunk = this.bufferProcessing(chunk)
     }
 
-    const rows = Math.floor(chunk.length / this.rowSize)
-
-    this.saveNotFullRow(chunk, rows, this.rowSize)
-    this.flipAndPush(chunk, rows, this.rowSize, this.fillingBytes)
+    this.transformChunk(chunk, this.rowSize, this.fillingBytes)
 
     next()
+  }
+
+  /**
+   * Parse need data from first chunk
+   * @param {Buffer} chunk - first chunk
+   * @param {number} headerSize - optional header length parameter
+   * @returns {Buffer}
+   */
+  parseHeader (chunk, headerSize = 14) {
+    try {
+      const { offset } = decodeFileHeader(chunk.slice(0, headerSize))
+      const dibHeaderSize = chunk.readUInt32LE(headerSize)
+      const dibHeader = decodeDIBHeader(chunk.slice(headerSize, dibHeaderSize))
+      const { rowSize, fillingBytes } = getRowInfo(dibHeader.imageSize, dibHeader.height, dibHeader.width)
+
+      const header = chunk.slice(0, offset)
+
+      this.offset = offset
+      this.rowSize = rowSize
+      this.fillingBytes = fillingBytes
+
+      return header
+    } catch (e) {
+      throw e
+    }
+  }
+
+  /**
+   * Fill buffer from chunk and push this
+   * @param {Buffer} chunk - received chunk
+   * @returns {Buffer} - link on the rest of the chunk
+   */
+  bufferProcessing (chunk) {
+    const needFilling = this.rowSize - this.buffer.length
+    const filler = chunk.slice(0, needFilling)
+    const row = Buffer.concat([this.buffer, filler], this.rowSize)
+
+    this.buffer = null
+    this.flipAndPush(row, 1, this.rowSize, this.fillingBytes)
+    return chunk.slice(needFilling)
+  }
+
+  /**
+   * Processed Chunk
+   * @param {Buffer} imageBuffer - chunk part
+   * @param {number} rowSize - row size in bytes
+   * @param {number} fillingBytes - count of filling bytes
+   */
+  transformChunk (imageBuffer, rowSize, fillingBytes) {
+    const rows = Math.floor(imageBuffer.length / this.rowSize)
+
+    this.saveNotFullRow(imageBuffer, rows, rowSize)
+    this.flipAndPush(imageBuffer, rows, rowSize, fillingBytes)
   }
 
   /**
@@ -91,9 +120,9 @@ class MirrorStream extends Transform {
     for (let i = 0; i < rows; i += 1) {
       const row = imgBuffer.slice(i * rowSize, (i + 1) * rowSize)
 
-      const reversiblePart = row.slice(0, rowSize - fillingBytes)
+      const flipPart = row.slice(0, rowSize - fillingBytes)
 
-      flipRow(reversiblePart)
+      flipRow(flipPart)
 
       this.push(row)
     }
