@@ -15,7 +15,7 @@ class MyReadStream extends Readable {
 
         this._idx += size
         this.push(buf)
-      }, 1000)
+      }, 1500)
     } else {
       this.push(null)
     }
