@@ -1,6 +1,12 @@
 const fs = require('fs').promises
+const syncFs = require('fs')
 const path = require('path')
-const { convert, pipeline, flipRow, MyWriteStream, MyReadStream } = require('../src/core')
+const { Readable } = require('stream')
+const stream = require('stream')
+const { convert, pipeline, flipRow, MyWriteStream, MyReadStream, MirrorStream } = require('../src/core')
+const util = require('util')
+
+const asyncPipeline = util.promisify(stream.pipeline)
 
 jest.setTimeout(900000)
 
@@ -240,6 +246,61 @@ describe('TRANSFORM STREAM', () => {
 
     expect(Buffer.compare(result, sample)).toStrictEqual(0)
   })
+
+  test('convert small with latency and very small package', async () => {
+    const inputPath = path.join(__dirname, '../', 'assets/', 'input.bmp')
+    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___assets_output.bmp')
+    const outputPath = path.join(__dirname, '../', 'dist/', 'output.bmp')
+
+    const buffer = await fs.readFile(inputPath)
+    let idx = 0
+    let offsetIdx = 0
+    const data = [2, 3, 4, 5, 6, 7]
+
+    const flip = new MirrorStream()
+    const ws = syncFs.createWriteStream(outputPath)
+
+    class TestReadable extends Readable {
+      _read (size) {
+        if (idx < buffer.length) {
+          let end = data[(offsetIdx++) % data.length]
+
+          if (end + idx >= buffer.length) {
+            end = buffer.length
+          }
+
+          setTimeout(() => {
+            this.push(buffer.slice(idx, idx + end))
+            idx += end
+          }, 2)
+        } else {
+          this.push(null)
+        }
+      }
+    }
+
+    const t = new TestReadable()
+
+    try {
+      await asyncPipeline(
+        t,
+        flip,
+        ws
+      )
+    } catch (e) {
+      console.log(e)
+    }
+
+    // const res = await pipeline(inputPath, outputPath)
+
+    // console.log(res)
+
+    const sample = await fs.readFile(samplePath)
+    const result = await fs.readFile(outputPath)
+
+    expect(Buffer.compare(result, sample)).toStrictEqual(0)
+  })
+
   test('not div on 4', async () => {
     const inputPath = path.join(__dirname, '../', 'assets/', 'notdiv4.bmp')
     const samplePath = path.join(__dirname, '../', 'dist/', '__test___notdiv4_output.bmp')
