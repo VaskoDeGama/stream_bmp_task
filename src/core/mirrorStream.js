@@ -1,9 +1,18 @@
 const { Transform } = require('stream')
 const { decodeFileHeader, decodeDIBHeader, getRowInfo, flipRow } = require('./convert')
 
+/**
+ * Transform stream class
+ * @class
+ * @classdesc transform stream for flipping image
+ */
 class MirrorStream extends Transform {
-  constructor () {
-    super()
+  /**
+   * Transform stream constructor, preparing private variables for work
+   * @param {Object} options -  stream options
+   */
+  constructor (options) {
+    super(options)
 
     this.fileHeader = null
     this.dibHeader = null
@@ -12,17 +21,17 @@ class MirrorStream extends Transform {
     this.itFirstPackage = true
 
     this.buffer = null
-    this.chunkSize = null
-    this.chunkCount = 0
   }
 
+  /**
+   * Main transform function
+   * @param {Buffer} chunk - data part
+   * @param {string} encoding - data encoding
+   * @param {function} next - callback
+   * @private
+   */
   _transform (chunk, encoding, next) {
-    // this.chunkCount += 1
-    // console.log('Chunk count: ', this.chunkCount)
-
     if (this.itFirstPackage) {
-      this.chunkSize = chunk.length
-
       try {
         this.fileHeader = decodeFileHeader(chunk.slice(0, 14))
       } catch (e) {
@@ -43,10 +52,6 @@ class MirrorStream extends Transform {
       this.push(header)
 
       const imageBuffer = chunk.slice(this.fileHeader.offset)
-
-      // console.log(this.chunkSize)
-      // console.log(this.fileHeader)
-      // console.log(this.dibHeader)
 
       this.itFirstPackage = false
 
@@ -75,6 +80,13 @@ class MirrorStream extends Transform {
     next()
   }
 
+  /**
+   *
+   * @param {Buffer} imgBuffer - chunk part
+   * @param {number} rows - rows count
+   * @param {number} rowSize - row size in bytes
+   * @param {number} fillingBytes - count of filling bytes
+   */
   flipAndPush (imgBuffer, rows, rowSize, fillingBytes) {
     for (let i = 0; i < rows; i += 1) {
       const row = imgBuffer.slice(i * rowSize, (i + 1) * rowSize)
@@ -87,6 +99,12 @@ class MirrorStream extends Transform {
     }
   }
 
+  /**
+   * Save to buffer image part there not full row
+   * @param {Buffer} imgBuffer - chunk part
+   * @param {number} rows - rows count
+   * @param {number} rowSize - row size in bytes
+   */
   saveNotFullRow (imgBuffer, rows, rowSize) {
     this.buffer = Buffer.alloc(imgBuffer.length - (rowSize * rows))
     imgBuffer.copy(this.buffer, 0, rowSize * rows, imgBuffer.length)
