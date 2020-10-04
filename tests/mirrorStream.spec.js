@@ -43,7 +43,7 @@ describe('TRANSFORM STREAM', () => {
     })
   })
 
-  test('convert small with latency and very small package', () => {
+  test('convert small with latency and very small package', done => {
     const inputPath = path.join(__dirname, '../', 'assets/', 'input.bmp')
     const samplePath = path.join(__dirname, '../', 'dist/', '__tests___assets_output.bmp')
     const outputPath = path.join(__dirname, '../', 'dist/', 'output.bmp')
@@ -79,12 +79,13 @@ describe('TRANSFORM STREAM', () => {
 
     pipeline(t, flip, ws, (err) => {
       if (err) {
-        throw err
+        done(err)
       } else {
         const sample = fs.readFileSync(samplePath)
         const result = fs.readFileSync(outputPath)
 
         expect(Buffer.compare(result, sample)).toStrictEqual(0)
+        done()
       }
     })
   })
