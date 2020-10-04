@@ -172,6 +172,7 @@ const convert = (rawData) => {
 
 module.exports = {
   convert,
+  decode,
   flipRow,
   decodeFileHeader,
   decodeDIBHeader,

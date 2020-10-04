@@ -53,7 +53,7 @@ class MirrorStream extends Transform {
 
     this.transformChunk(chunk, this.rowSize, this.fillingBytes)
 
-    next()
+    next(null, chunk)
   }
 
   /**
