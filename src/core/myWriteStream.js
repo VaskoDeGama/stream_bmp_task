@@ -10,15 +10,12 @@ class MyWriteStream extends Writable {
   _write (chunk, encoding, next) {
     const parsedChunk = [...chunk.values()]
 
-    console.log('Received:', parsedChunk)
-
     if (this.buffer.length < 10) {
       if (this.buffer.length + parsedChunk.length > 10) {
         const excess = parsedChunk.splice(10 - this.buffer.length, parsedChunk.length)
 
         this.buffer.push(...parsedChunk)
         this.result.push(this.buffer)
-        console.log('Pushed to result:', this.buffer)
         this.buffer = []
         this.buffer.push(...excess)
       } else {
@@ -35,7 +32,6 @@ class MyWriteStream extends Writable {
   _final (callback) {
     if (this.buffer.length > 0) {
       this.result.push(this.buffer)
-      console.log('Pushed to result:', this.buffer)
       this.buffer = []
     }
   }

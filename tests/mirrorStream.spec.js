@@ -90,6 +90,55 @@ describe('TRANSFORM STREAM', () => {
     })
   })
 
+  test('convert small with different latency and very small package', done => {
+    const inputPath = path.join(__dirname, '../', 'assets/', 'input.bmp')
+    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___assets_output.bmp')
+    const outputPath = path.join(__dirname, '../', 'dist/', 'output.bmp')
+
+    const buffer = fs.readFileSync(inputPath)
+    let idx = 0
+    let offsetIdx = 0
+    const shift = [20, 30, 40, 50, 60, 70]
+
+    const flip = new MirrorStream({})
+    const ws = fs.createWriteStream(outputPath)
+
+    class TestReadable extends Readable {
+      _read (size) {
+        if (idx < buffer.length) {
+          let latency = shift[(offsetIdx++) % shift.length]
+
+          setTimeout(() => {
+            let end = shift[(offsetIdx++) % shift.length]
+
+            if (end + idx >= buffer.length) {
+              end = buffer.length
+            }
+
+            this.push(buffer.slice(idx, idx + end))
+            idx += end
+          }, latency)
+        } else {
+          this.push(null)
+        }
+      }
+    }
+
+    const t = new TestReadable()
+
+    pipeline(t, flip, ws, (err) => {
+      if (err) {
+        done(err)
+      } else {
+        const sample = fs.readFileSync(samplePath)
+        const result = fs.readFileSync(outputPath)
+
+        expect(Buffer.compare(result, sample)).toStrictEqual(0)
+        done()
+      }
+    })
+  })
+
   test('not div on 4', done => {
     const inputPath = path.join(__dirname, '../', 'assets/', 'notdiv4.bmp')
     const samplePath = path.join(__dirname, '../', 'dist/', '__test___notdiv4_output.bmp')

@@ -1,5 +1,7 @@
 const { MyWriteStream, MyReadStream } = require('../src/core')
 
+jest.setTimeout(90000)
+
 describe('STREAMS:', () => {
   test('pipe', async () => {
     const bigArray = Array.from({ length: 30 }, (v, k) => k + 1)

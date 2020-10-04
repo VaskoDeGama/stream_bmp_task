@@ -162,7 +162,6 @@ const convert = (rawData) => {
       const data = decode(rawData)
 
       verticallyReflect(data.image, data.rowInfo.rowSize, data.dibHeader.height, data.rowInfo.fillingBytes)
-      console.log('Done:', data)
       resolve(rawData)
     } catch (e) {
       reject(e)

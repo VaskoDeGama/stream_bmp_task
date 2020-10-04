@@ -20,10 +20,6 @@ class MyReadStream extends Readable {
       this.push(null)
     }
   }
-
-  getMemory () {
-    return this.memory
-  }
 }
 
 module.exports = MyReadStream

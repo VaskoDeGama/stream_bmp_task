@@ -6,8 +6,6 @@ describe('flip row', () => {
     const equalBuffer = Buffer.alloc(9, 'bbbbbbaaaaaaffffff', 'hex')
     const result = flipRow(testBuffer)
 
-    console.log(testBuffer)
-    console.log(result)
     expect(result).toStrictEqual(equalBuffer)
   })
   test('test row 2 ', async () => {
