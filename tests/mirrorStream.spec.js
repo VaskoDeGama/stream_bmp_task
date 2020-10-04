@@ -14,12 +14,12 @@ describe('TRANSFORM STREAM', () => {
     const rs = fs.createReadStream(inputPath)
     const ws = fs.createWriteStream(outputPath)
 
-    rs.pipe(flip).pipe(ws)
-
     flip.on('error', (err) => {
       expect(err.message).toBe('InvalidImageError')
       done()
     })
+
+    rs.pipe(flip).pipe(ws)
   })
   test('convert small square file', done => {
     const inputPath = path.join(__dirname, '../', 'assets/', 'input.bmp')
