@@ -30,6 +30,8 @@ class MirrorStream extends Transform {
    * @private
    */
   _transform (chunk, encoding, next) {
+    console.log(chunk)
+
     if (this.itFirstPackage) {
       try {
         const header = this.parseHeader(chunk)
@@ -53,7 +55,7 @@ class MirrorStream extends Transform {
 
     this.transformChunk(chunk, this.rowSize, this.fillingBytes)
 
-    next(null, chunk)
+    next()
   }
 
   /**
