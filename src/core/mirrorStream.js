@@ -38,24 +38,20 @@ class MirrorStream extends Transform {
 
     if (this.firstBigChunk) {
       try {
-        const fileHeader = decodeFileHeader(bigChunk.slice(0, FILE_HEADER_SIZE))
+        const { offset } = decodeFileHeader(bigChunk.slice(0, FILE_HEADER_SIZE))
         const dibHeaderSize = bigChunk.readInt32LE(FILE_HEADER_SIZE)
-        const dibHeader = decodeDIBHeader(bigChunk.slice(FILE_HEADER_SIZE, dibHeaderSize + FILE_HEADER_SIZE))
-        const rowInfo = getRowInfo(dibHeader.imageSize, dibHeader.height, dibHeader.width)
+        const { imageSize, height, width } = decodeDIBHeader(bigChunk.slice(FILE_HEADER_SIZE, dibHeaderSize + FILE_HEADER_SIZE))
+        const { rowSize, fillingBytes } = getRowInfo(imageSize, height, width)
 
-        console.log(rowInfo, dibHeader, fileHeader)
-
-        const header = bigChunk.slice(0, fileHeader.offset)
+        const header = bigChunk.slice(0, offset)
 
         if (bigChunk.length - header.length > 0) {
-          const remainingBytes = bigChunk.slice(header.length, bigChunk.length)
-
-          this.buffer = Buffer.concat([this.buffer, remainingBytes])
+          this.saveRemainingBytes(bigChunk, header)
         }
 
-        this.rowSize = rowInfo.rowSize
-        this.fillingBytes = rowInfo.fillingBytes
-        this.bufferSize = rowInfo.rowSize
+        this.rowSize = rowSize
+        this.fillingBytes = fillingBytes
+        this.bufferSize = rowSize
         this.firstBigChunk = false
 
         return next(null, header)
@@ -64,37 +60,55 @@ class MirrorStream extends Transform {
       }
     }
 
-    const rows = Math.floor(bigChunk.length / this.rowSize)
+    const transformedData = this.transformData(bigChunk)
 
-    for (let i = 0; i < rows; i += 1) {
-      const row = bigChunk.slice(i * this.rowSize, (i + 1) * this.rowSize)
-      const flippableRow = row.slice(0, row.length - this.fillingBytes)
+    this.saveRemainingBytes(bigChunk, transformedData)
 
-      flipRow(flippableRow)
-      this.push(row)
+    next(null, transformedData)
+  }
+
+  /**
+   * Transform last part of data
+   * @param {function} next
+   * @private
+   */
+  _flush (next) {
+    if (this.buffer.length > 0) {
+      const transformedData = this.transformData(this.buffer)
+
+      return next(null, transformedData)
     }
-
-    const remainingBytes = bigChunk.slice(this.rowSize * rows, bigChunk.length)
-
-    this.buffer = Buffer.concat([this.buffer, remainingBytes])
 
     next()
   }
 
-  _flush (next) {
-    if (this.buffer.length > 0) {
-      const rows = Math.floor(this.buffer.length / this.rowSize)
+  /**
+   * Save remaining bytes to buffer
+   * @param {Buffer} rawData - received chunks
+   * @param {Buffer} transformedData - transformed part of received chunks
+   */
+  saveRemainingBytes (rawData, transformedData) {
+    const remainingBytes = rawData.slice(transformedData.length, rawData.length)
 
-      for (let i = 0; i < rows; i += 1) {
-        const row = this.buffer.slice(i * this.rowSize, (i + 1) * this.rowSize)
-        const flippableRow = row.slice(0, row.length - this.fillingBytes)
+    this.buffer = Buffer.concat([this.buffer, remainingBytes])
+  }
 
-        flipRow(flippableRow)
-        this.push(row)
-      }
+  /**
+   * Flip received pixel array by rows and return link on transformed part
+   * @param {Buffer} data - buffer with pixel array
+   * @returns {Buffer} transformed part of pixel array
+   */
+  transformData (data) {
+    const rows = Math.floor(data.length / this.rowSize)
+
+    for (let i = 0; i < rows; i += 1) {
+      const row = data.slice(i * this.rowSize, (i + 1) * this.rowSize)
+      const flippableRow = row.slice(0, row.length - this.fillingBytes)
+
+      flipRow(flippableRow)
     }
 
-    next()
+    return data.slice(0, rows * this.rowSize)
   }
 }
 

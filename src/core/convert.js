@@ -117,7 +117,7 @@ const decode = (rawData) => {
 
 /**
  * Reverse row
- * @param {Buffer || blob } row - buffer containing a string of pixels
+ * @param {Buffer} row - buffer containing a string of pixels
  * @returns {Buffer} pixel array after transform
  */
 const flipRow = (row) => {
