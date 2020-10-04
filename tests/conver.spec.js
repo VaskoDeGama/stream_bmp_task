@@ -1,101 +1,4 @@
-const fs = require('fs').promises
-const syncFs = require('fs')
-const path = require('path')
-const { Readable } = require('stream')
-const stream = require('stream')
-const { convert, pipeline, flipRow, MyWriteStream, MyReadStream, MirrorStream } = require('../src/core')
-const util = require('util')
-
-const asyncPipeline = util.promisify(stream.pipeline)
-
-jest.setTimeout(900000)
-
-describe('convert', () => {
-  test('error test not bmp', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'BMPfileFormat.png')
-    const inputBuff = await fs.readFile(inputPath)
-
-    expect.assertions(1)
-
-    try {
-      await convert(inputBuff)
-    } catch (e) {
-      expect(e.message).toEqual('InvalidImageError')
-    }
-  })
-  test('convert small square file', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'input.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___assets_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'output.bmp')
-    const inputBuff = await fs.readFile(inputPath)
-    const sample = await fs.readFile(samplePath)
-
-    const result = await convert(inputBuff)
-
-    await fs.writeFile(outputPath, result)
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-  test('not div on 4', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'notdiv4.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__test___notdiv4_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'notdiv4_output.bmp')
-    const inputBuff = await fs.readFile(inputPath)
-    const sample = await fs.readFile(samplePath)
-
-    const result = await convert(inputBuff)
-
-    await fs.writeFile(outputPath, result)
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-  test('convert height  file', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'heidth.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___heidth_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'heidth.bmp')
-    const inputBuff = await fs.readFile(inputPath)
-    const sample = await fs.readFile(samplePath)
-
-    const result = await convert(inputBuff)
-
-    await fs.writeFile(outputPath, result)
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-  test('convert 30mb ', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'kekasic.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__test__kekasic_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'kekasic_output.bmp')
-    const inputBuff = await fs.readFile(inputPath)
-    const sample = await fs.readFile(samplePath)
-
-    const result = await convert(inputBuff)
-
-    await fs.writeFile(outputPath, result)
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-  test('convert 80mb', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'big.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___big_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'big_output.bmp')
-    const inputBuff = await fs.readFile(inputPath)
-    const sample = await fs.readFile(samplePath)
-
-    const result = await convert(inputBuff)
-
-    await fs.writeFile(outputPath, result)
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-  test('convert 300mb', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'big2.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___big2_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'big2_output.bmp')
-    const inputBuff = await fs.readFile(inputPath)
-    const sample = await fs.readFile(samplePath)
-
-    const result = await convert(inputBuff)
-
-    await fs.writeFile(outputPath, result)
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-})
+const { flipRow, MyWriteStream, MyReadStream } = require('../src/core')
 
 describe('flip row', () => {
   test('test row ', async () => {
@@ -221,149 +124,149 @@ describe('STREAMS:', () => {
   })
 })
 
-describe('TRANSFORM STREAM', () => {
-  test('error test not bmp', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'BMPfileFormat.png')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'BMPfileFormat.png')
-
-    try {
-      await pipeline(inputPath, outputPath)
-    } catch (e) {
-      expect(e.message).toEqual('InvalidImageError')
-    }
-  })
-  test('convert small square file', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'input.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___assets_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'output.bmp')
-
-    const res = await pipeline(inputPath, outputPath)
-
-    console.log(res)
-
-    const sample = await fs.readFile(samplePath)
-    const result = await fs.readFile(outputPath)
-
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-
-  test('convert small with latency and very small package', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'input.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___assets_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'output.bmp')
-
-    const buffer = await fs.readFile(inputPath)
-    let idx = 0
-    let offsetIdx = 0
-    const shift = [2, 3, 4, 5, 6, 7]
-
-    const flip = new MirrorStream()
-    const ws = syncFs.createWriteStream(outputPath)
-
-    class TestReadable extends Readable {
-      _read (size) {
-        if (idx < buffer.length) {
-          setTimeout(() => {
-            let end = shift[(offsetIdx++) % shift.length]
-
-            if (end + idx >= buffer.length) {
-              end = buffer.length
-            }
-
-            this.push(buffer.slice(idx, idx + end))
-            idx += end
-          }, 2)
-        } else {
-          this.push(null)
-        }
-      }
-    }
-
-    const t = new TestReadable()
-
-    try {
-      await asyncPipeline(
-        t,
-        flip,
-        ws
-      )
-    } catch (e) {
-      console.log(e)
-    }
-
-    // const res = await pipeline(inputPath, outputPath)
-
-    // console.log(res)
-
-    const sample = await fs.readFile(samplePath)
-    const result = await fs.readFile(outputPath)
-
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-
-  test('not div on 4', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'notdiv4.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__test___notdiv4_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'notdiv4_output.bmp')
-    const res = await pipeline(inputPath, outputPath)
-
-    console.log(res)
-
-    const sample = await fs.readFile(samplePath)
-    const result = await fs.readFile(outputPath)
-
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-  test('convert height  file', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'heidth.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___heidth_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'heidth.bmp')
-    const res = await pipeline(inputPath, outputPath)
-
-    console.log(res)
-
-    const sample = await fs.readFile(samplePath)
-    const result = await fs.readFile(outputPath)
-
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-  test('convert 30mb ', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'kekasic.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__test__kekasic_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'kekasic_output.bmp')
-    const res = await pipeline(inputPath, outputPath)
-
-    console.log(res)
-
-    const sample = await fs.readFile(samplePath)
-    const result = await fs.readFile(outputPath)
-
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-  test('convert 80mb', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'big.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___big_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'big_output.bmp')
-    const res = await pipeline(inputPath, outputPath)
-
-    console.log(res)
-
-    const sample = await fs.readFile(samplePath)
-    const result = await fs.readFile(outputPath)
-
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-  test('convert 300mb', async () => {
-    const inputPath = path.join(__dirname, '../', 'assets/', 'big2.bmp')
-    const samplePath = path.join(__dirname, '../', 'dist/', '__tests___big2_output.bmp')
-    const outputPath = path.join(__dirname, '../', 'dist/', 'big2_output.bmp')
-    const res = await pipeline(inputPath, outputPath)
-
-    console.log(res)
-
-    const sample = await fs.readFile(samplePath)
-    const result = await fs.readFile(outputPath)
-
-    expect(Buffer.compare(result, sample)).toStrictEqual(0)
-  })
-})
+// describe('TRANSFORM STREAM', () => {
+//   test('error test not bmp', async () => {
+//     const inputPath = path.join(__dirname, '../', 'assets/', 'BMPfileFormat.png')
+//     const outputPath = path.join(__dirname, '../', 'dist/', 'BMPfileFormat.png')
+//
+//     try {
+//       await pipeline(inputPath, outputPath)
+//     } catch (e) {
+//       expect(e.message).toEqual('InvalidImageError')
+//     }
+//   })
+//   test('convert small square file', async () => {
+//     const inputPath = path.join(__dirname, '../', 'assets/', 'input.bmp')
+//     const samplePath = path.join(__dirname, '../', 'dist/', '__tests___assets_output.bmp')
+//     const outputPath = path.join(__dirname, '../', 'dist/', 'output.bmp')
+//
+//     const res = await pipeline(inputPath, outputPath)
+//
+//     console.log(res)
+//
+//     const sample = await fs.readFile(samplePath)
+//     const result = await fs.readFile(outputPath)
+//
+//     expect(Buffer.compare(result, sample)).toStrictEqual(0)
+//   })
+//
+//   test('convert small with latency and very small package', async () => {
+//     const inputPath = path.join(__dirname, '../', 'assets/', 'input.bmp')
+//     const samplePath = path.join(__dirname, '../', 'dist/', '__tests___assets_output.bmp')
+//     const outputPath = path.join(__dirname, '../', 'dist/', 'output.bmp')
+//
+//     const buffer = await fs.readFile(inputPath)
+//     let idx = 0
+//     let offsetIdx = 0
+//     const shift = [2, 3, 4, 5, 6, 7]
+//
+//     const flip = new MirrorStream()
+//     const ws = syncFs.createWriteStream(outputPath)
+//
+//     class TestReadable extends Readable {
+//       _read (size) {
+//         if (idx < buffer.length) {
+//           setTimeout(() => {
+//             let end = shift[(offsetIdx++) % shift.length]
+//
+//             if (end + idx >= buffer.length) {
+//               end = buffer.length
+//             }
+//
+//             this.push(buffer.slice(idx, idx + end))
+//             idx += end
+//           }, 2)
+//         } else {
+//           this.push(null)
+//         }
+//       }
+//     }
+//
+//     const t = new TestReadable()
+//
+//     try {
+//       await asyncPipeline(
+//         t,
+//         flip,
+//         ws
+//       )
+//     } catch (e) {
+//       console.log(e)
+//     }
+//
+//     // const res = await pipeline(inputPath, outputPath)
+//
+//     // console.log(res)
+//
+//     const sample = await fs.readFile(samplePath)
+//     const result = await fs.readFile(outputPath)
+//
+//     expect(Buffer.compare(result, sample)).toStrictEqual(0)
+//   })
+//
+//   test('not div on 4', async () => {
+//     const inputPath = path.join(__dirname, '../', 'assets/', 'notdiv4.bmp')
+//     const samplePath = path.join(__dirname, '../', 'dist/', '__test___notdiv4_output.bmp')
+//     const outputPath = path.join(__dirname, '../', 'dist/', 'notdiv4_output.bmp')
+//     const res = await pipeline(inputPath, outputPath)
+//
+//     console.log(res)
+//
+//     const sample = await fs.readFile(samplePath)
+//     const result = await fs.readFile(outputPath)
+//
+//     expect(Buffer.compare(result, sample)).toStrictEqual(0)
+//   })
+//   test('convert height  file', async () => {
+//     const inputPath = path.join(__dirname, '../', 'assets/', 'heidth.bmp')
+//     const samplePath = path.join(__dirname, '../', 'dist/', '__tests___heidth_output.bmp')
+//     const outputPath = path.join(__dirname, '../', 'dist/', 'heidth.bmp')
+//     const res = await pipeline(inputPath, outputPath)
+//
+//     console.log(res)
+//
+//     const sample = await fs.readFile(samplePath)
+//     const result = await fs.readFile(outputPath)
+//
+//     expect(Buffer.compare(result, sample)).toStrictEqual(0)
+//   })
+//   test('convert 30mb ', async () => {
+//     const inputPath = path.join(__dirname, '../', 'assets/', 'kekasic.bmp')
+//     const samplePath = path.join(__dirname, '../', 'dist/', '__test__kekasic_output.bmp')
+//     const outputPath = path.join(__dirname, '../', 'dist/', 'kekasic_output.bmp')
+//     const res = await pipeline(inputPath, outputPath)
+//
+//     console.log(res)
+//
+//     const sample = await fs.readFile(samplePath)
+//     const result = await fs.readFile(outputPath)
+//
+//     expect(Buffer.compare(result, sample)).toStrictEqual(0)
+//   })
+//   test('convert 80mb', async () => {
+//     const inputPath = path.join(__dirname, '../', 'assets/', 'big.bmp')
+//     const samplePath = path.join(__dirname, '../', 'dist/', '__tests___big_output.bmp')
+//     const outputPath = path.join(__dirname, '../', 'dist/', 'big_output.bmp')
+//     const res = await pipeline(inputPath, outputPath)
+//
+//     console.log(res)
+//
+//     const sample = await fs.readFile(samplePath)
+//     const result = await fs.readFile(outputPath)
+//
+//     expect(Buffer.compare(result, sample)).toStrictEqual(0)
+//   })
+//   test('convert 300mb', async () => {
+//     const inputPath = path.join(__dirname, '../', 'assets/', 'big2.bmp')
+//     const samplePath = path.join(__dirname, '../', 'dist/', '__tests___big2_output.bmp')
+//     const outputPath = path.join(__dirname, '../', 'dist/', 'big2_output.bmp')
+//     const res = await pipeline(inputPath, outputPath)
+//
+//     console.log(res)
+//
+//     const sample = await fs.readFile(samplePath)
+//     const result = await fs.readFile(outputPath)
+//
+//     expect(Buffer.compare(result, sample)).toStrictEqual(0)
+//   })
+// })

@@ -1,5 +1,7 @@
+const fs = require('fs')
 const path = require('path')
-const { pipeline } = require('./core')
+const stream = require('stream')
+const { MirrorStream } = require('./core')
 /**
  * Read, convert and save file
  * @returns {Promise<void>}
@@ -11,9 +13,30 @@ const outputPath = path.join(__dirname, '../', outputArg)
 
 const main = async () => {
   try {
-    const result = await pipeline(inputPath, outputPath)
+    if (!fs.existsSync(inputPath)) {
+      return new Error('File not exist')
+    }
 
-    console.log(result)
+    if (!fs.existsSync(outputPath)) {
+      fs.writeFileSync(outputPath, '')
+    }
+
+    const flip = new MirrorStream()
+    const rs = fs.createReadStream(inputPath)
+    const ws = fs.createWriteStream(outputPath)
+
+    stream.pipeline(
+      rs,
+      flip,
+      ws,
+      (err) => {
+        if (err) {
+          throw err
+        } else {
+          console.log('Transform succeeded')
+        }
+      }
+    )
   } catch (e) {
     console.log(e)
     return e
